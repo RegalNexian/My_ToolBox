@@ -1,8 +1,8 @@
 TAB_NAME = "QR Tools"
 from datetime import datetime
 import qrcode
-import pyzbar.pyzbar as pyzbar
-import pyperclip
+import pyzbar.pyzbar as pyzbar # type: ignore
+import pyperclip # type: ignore
 import re
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -90,7 +90,7 @@ class ToolFrame(tk.Frame):
             result = decoded[0].data.decode("utf-8")
             self.result_text.delete("1.0", tk.END)
             self.result_text.insert(tk.END, result)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             messagebox.showerror("Error", f"Failed to read QR: {e}")
 
     def copy_result(self):

@@ -2,8 +2,8 @@ TAB_NAME = "Text Formatter"
 
 import tkinter as tk
 from tkinter import messagebox
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter # type: ignore
+from reportlab.pdfgen import canvas # type: ignore
 from utils import get_save_path
 
 BG_COLOR = "#1E1E1E"

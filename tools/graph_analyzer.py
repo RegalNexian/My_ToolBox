@@ -87,9 +87,15 @@ class ToolFrame(tk.Frame):
         if ext == ".mtx":
             if not SCIPY_OK:
                 raise RuntimeError("Reading .mtx requires SciPy. Install with: pip install scipy")
-            coo = mmread(path).tocoo()
-            G = nx.Graph()
-            rows, cols = coo.row, coo.col
+            mtx = mmread(path)
+            # Only sparse matrices have tocoo()
+            if hasattr(mtx, "tocoo"):
+                coo = mtx.tocoo()
+                rows, cols = coo.row, coo.col
+            else:
+                # Assume dense ndarray
+                rows, cols = np.where(mtx)
+            G: nx.Graph = nx.Graph()
             for u, v in zip(rows, cols):
                 if u != v:
                     G.add_edge(int(u), int(v))
