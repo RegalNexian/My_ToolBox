@@ -13,7 +13,7 @@ try:
     from scipy.io import mmread
     import numpy as np
     SCIPY_OK = True
-except Exception:
+except (ImportError, ModuleNotFoundError):
     SCIPY_OK = False
 
 BG_COLOR = "#1E1E1E"
@@ -77,7 +77,7 @@ class ToolFrame(tk.Frame):
             self.out.insert(tk.END, df.to_string(index=False))
             messagebox.showinfo("Graph Analyzer", f"Saved:\n{metrics_path}\n{plot_path}")
 
-        except Exception as e:
+        except (FileNotFoundError, IOError, ValueError, RuntimeError, nx.NetworkXError) as e:
             messagebox.showerror("Error", str(e))
 
     def _read_graph(self, path: str):
