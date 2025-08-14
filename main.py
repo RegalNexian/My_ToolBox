@@ -54,7 +54,7 @@ class ToolboxApp(tk.Tk):
                     if hasattr(module, "ToolFrame"):
                         tab_name = getattr(module, "TAB_NAME", module_name.replace("_", " ").title())
                         tools_list.append((tab_name, module))
-                except Exception as e:
+                except (ImportError, AttributeError) as e:
                     print(f"Error loading {module_name}: {e}")
         return tools_list
 
