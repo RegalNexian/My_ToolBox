@@ -3,11 +3,7 @@ import importlib
 import os
 import sys
 from utils import ensure_results_subfolder, RESULTS_ROOT
-
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
+from theme import BG_COLOR, PANEL_COLOR, TEXT_COLOR, TITLE_FONT, style_button
 
 ICON_MAP = {
     "QR Tools": "📷",
@@ -18,26 +14,24 @@ ICON_MAP = {
     "Unit Converter": "📏",
     "Text Encryptor": "🛡",
     "Text Counter": "📝",
-    "Color Picker": "🎨"
+    "Color Picker": "🎨",
+    "Steganography Tool": "🖼",
+    "Dataset Finder": "🌐",
+    "File Finder": "🔎",
 }
 
 class ToolboxApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("My Toolbox")
+        self.title("🚀 My Toolbox")
         self.geometry("1000x700")
         self.configure(bg=BG_COLOR)
 
         self.container = tk.Frame(self, bg=BG_COLOR)
         self.container.pack(fill="both", expand=True)
 
-        # Load tools
         self.tools = self.load_tools()
-
-        # Ensure Results folder structure
         self.setup_results_folders()
-
-        # Show main menu
         self.show_main_menu()
 
     def load_tools(self):
@@ -59,7 +53,6 @@ class ToolboxApp(tk.Tk):
         return tools_list
 
     def setup_results_folders(self):
-        """Ensure Results root and subfolders for each tool exist."""
         os.makedirs(RESULTS_ROOT, exist_ok=True)
         for tool_name, _ in self.tools:
             ensure_results_subfolder(tool_name.replace(" ", "_"))
@@ -68,28 +61,40 @@ class ToolboxApp(tk.Tk):
         for widget in self.container.winfo_children():
             widget.destroy()
 
-        tk.Label(self.container, text="🛠 My Toolbox", font=("Segoe UI", 20, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=30)
+        title = tk.Label(
+            self.container,
+            text="🛠 MY TOOLBOX",
+            font=TITLE_FONT,
+            fg=TEXT_COLOR,
+            bg=BG_COLOR
+        )
+        title.pack(pady=30)
 
         btn_frame = tk.Frame(self.container, bg=BG_COLOR)
         btn_frame.pack(expand=True)
 
         for idx, (name, module) in enumerate(self.tools):
             icon = ICON_MAP.get(name, "🛠")
-            btn_text = f"{icon}  {name}"
-            btn = tk.Button(btn_frame, text=btn_text, font=("Segoe UI", 12, "bold"),
-                            bg=BTN_COLOR, fg=FG_COLOR, relief="flat", width=30, height=2,
-                            command=lambda m=module: self.load_tool(m))
-            btn.grid(row=idx // 2, column=idx % 2, padx=20, pady=20)
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg=BTN_HOVER))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg=BTN_COLOR))
+            btn_text = f"{icon}\n{name}"
+
+            btn = tk.Button(
+                btn_frame,
+                text=btn_text,
+                width=22,
+                height=4,
+                wraplength=150,
+                justify="center",
+                command=lambda m=module: self.load_tool(m)
+            )
+            style_button(btn)
+            btn.grid(row=idx // 3, column=idx % 3, padx=20, pady=20)
 
     def load_tool(self, module):
         for widget in self.container.winfo_children():
             widget.destroy()
 
-        back_btn = tk.Button(self.container, text="⬅ Back to Menu", bg=BTN_COLOR, fg=FG_COLOR,
-                             relief="flat", command=self.show_main_menu)
+        back_btn = tk.Button(self.container, text="⬅ Back to Menu", command=self.show_main_menu)
+        style_button(back_btn)
         back_btn.pack(anchor="w", pady=10, padx=10)
 
         tool_frame = module.ToolFrame(self.container)

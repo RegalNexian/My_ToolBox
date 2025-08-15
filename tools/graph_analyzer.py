@@ -1,103 +1,112 @@
-TAB_NAME = "Graph Analyzer"
-
+from base_tool import BaseToolFrame
+from theme import style_button, style_label, style_entry, style_textbox, BG_COLOR, PANEL_COLOR
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import networkx as nx
 import matplotlib.pyplot as plt
-import pandas as pd
-from utils import get_save_path
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import scipy.io
 import os
 
-# Optional SciPy import for .mtx
-try:
-    from scipy.io import mmread
-    import numpy as np
-    SCIPY_OK = True
-except (ImportError, ModuleNotFoundError):
-    SCIPY_OK = False
+TAB_NAME = "Graph Analyzer"
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
-
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="Graph Analyzer", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        # ===== MAIN PANELS =====
+        self.left_panel = tk.Frame(self, bg=PANEL_COLOR, width=300)
+        self.left_panel.pack(side="left", fill="y", padx=5, pady=5)
 
-        self.make_button(self, "Select Graph File (.edges / .mtx)", self.load_graph).pack(pady=6)
+        self.right_panel = tk.Frame(self, bg=BG_COLOR)
+        self.right_panel.pack(side="right", fill="both", expand=True, padx=5, pady=5)
 
-        self.out = tk.Text(self, width=90, height=16,
-                           bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.out.pack(padx=10, pady=10)
+        # ===== LEFT: CONTROLS =====
+        style_label(tk.Label(self.left_panel, text="📂 Load Graph File"))
+        load_btn = tk.Button(self.left_panel, text="Select File", command=self.load_graph_file)
+        style_button(load_btn)
+        load_btn.pack(pady=5)
 
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR,
-                        relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+        style_label(tk.Label(self.left_panel, text="📊 Graph Metrics"))
+        metrics_btn = tk.Button(self.left_panel, text="Compute Metrics", command=self.compute_metrics)
+        style_button(metrics_btn)
+        metrics_btn.pack(pady=5)
 
-    def load_graph(self):
-        fp = filedialog.askopenfilename(filetypes=[("Graph files", "*.edges;*.mtx;*.txt")])
-        if not fp:
+        style_label(tk.Label(self.left_panel, text="🔍 Clustering"))
+        cluster_btn = tk.Button(self.left_panel, text="Run Clustering", command=self.run_clustering)
+        style_button(cluster_btn)
+        cluster_btn.pack(pady=5)
+
+        style_label(tk.Label(self.left_panel, text="📈 Visualize"))
+        vis_btn = tk.Button(self.left_panel, text="Show Graph Plot", command=self.show_graph_plot)
+        style_button(vis_btn)
+        vis_btn.pack(pady=5)
+
+        # ===== RIGHT: OUTPUT =====
+        style_label(tk.Label(self.right_panel, text="📜 Results Log"))
+        self.results_text = tk.Text(self.right_panel, height=15)
+        style_textbox(self.results_text)
+        self.results_text.pack(fill="x", pady=5)
+
+        style_label(tk.Label(self.right_panel, text="📉 Graph Visualization"))
+        self.plot_frame = tk.Frame(self.right_panel, bg=BG_COLOR)
+        self.plot_frame.pack(fill="both", expand=True)
+
+        self.G = None  # Loaded graph
+
+    def load_graph_file(self):
+        file_path = filedialog.askopenfilename(
+            title="Select Graph File",
+            filetypes=[("Edge List", "*.txt;*.edgelist;*.mtx"), ("All files", "*.*")]
+        )
+        if not file_path:
             return
         try:
-            G = self._read_graph(fp)
-            if G.number_of_nodes() == 0:
-                messagebox.showerror("Error", "Empty graph.")
-                return
-
-            degs = dict(G.degree())
-            avg_deg = sum(degs.values()) / G.number_of_nodes()
-            metrics = {
-                "Nodes": G.number_of_nodes(),
-                "Edges": G.number_of_edges(),
-                "Density": nx.density(G),
-                "Average Degree": round(avg_deg, 6),
-                "Avg. Clustering Coef": round(nx.average_clustering(G), 6),
-            }
-
-            df = pd.DataFrame(list(metrics.items()), columns=["Metric", "Value"])
-            metrics_path = get_save_path("Graph_Analysis", "metrics.csv")
-            df.to_csv(metrics_path, index=False)
-
-            plt.figure(figsize=(6, 6))
-            pos = nx.spring_layout(G, seed=42)
-            nx.draw(G, pos=pos, node_size=18, with_labels=False)
-            plot_path = get_save_path("Graph_Analysis", "graph_plot.png")
-            plt.tight_layout()
-            plt.savefig(plot_path, dpi=160)
-            plt.close()
-
-            self.out.delete("1.0", tk.END)
-            self.out.insert(tk.END, df.to_string(index=False))
-            messagebox.showinfo("Graph Analyzer", f"Saved:\n{metrics_path}\n{plot_path}")
-
-        except (FileNotFoundError, IOError, ValueError, RuntimeError, nx.NetworkXError) as e:
-            messagebox.showerror("Error", str(e))
-
-    def _read_graph(self, path: str):
-        ext = os.path.splitext(path)[1].lower()
-        if ext in {".edges", ".txt"}:
-            return nx.read_edgelist(path)
-        if ext == ".mtx":
-            if not SCIPY_OK:
-                raise RuntimeError("Reading .mtx requires SciPy. Install with: pip install scipy")
-            mtx = mmread(path)
-            # Only sparse matrices have tocoo()
-            if hasattr(mtx, "tocoo"):
-                coo = mtx.tocoo()
-                rows, cols = coo.row, coo.col
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in [".txt", ".edgelist"]:
+                self.G = nx.read_edgelist(file_path)
+            elif ext == ".mtx":
+                sparse_matrix = scipy.io.mmread(file_path)
+                self.G = nx.from_scipy_sparse_array(sparse_matrix)
             else:
-                # Assume dense ndarray
-                rows, cols = np.where(mtx)
-            G: nx.Graph = nx.Graph()
-            for u, v in zip(rows, cols):
-                if u != v:
-                    G.add_edge(int(u), int(v))
-            return G
-        raise ValueError("Unsupported file format.")
+                messagebox.showerror("Error", "Unsupported file format.")
+                return
+            self.results_text.insert(tk.END, f"Graph loaded: {file_path}\n")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load graph: {e}")
+
+    def compute_metrics(self):
+        if not self.G:
+            messagebox.showerror("Error", "Load a graph first.")
+            return
+        try:
+            num_nodes = self.G.number_of_nodes()
+            num_edges = self.G.number_of_edges()
+            density = nx.density(self.G)
+
+            self.results_text.insert(tk.END, f"Nodes: {num_nodes}\n")
+            self.results_text.insert(tk.END, f"Edges: {num_edges}\n")
+            self.results_text.insert(tk.END, f"Density: {density:.4f}\n")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to compute metrics: {e}")
+
+    def run_clustering(self):
+        if not self.G:
+            messagebox.showerror("Error", "Load a graph first.")
+            return
+        # Placeholder: Replace with actual clustering logic
+        self.results_text.insert(tk.END, "Clustering results: [Coming soon]\n")
+
+    def show_graph_plot(self):
+        if not self.G:
+            messagebox.showerror("Error", "Load a graph first.")
+            return
+
+        for widget in self.plot_frame.winfo_children():
+            widget.destroy()
+
+        fig, ax = plt.subplots(figsize=(5, 4))
+        nx.draw(self.G, with_labels=True, node_color="cyan", edge_color="gray", ax=ax)
+        canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True)

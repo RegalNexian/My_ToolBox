@@ -1,87 +1,99 @@
-TAB_NAME = "Password Generator"
-
+import random
+import string
 import tkinter as tk
 from tkinter import messagebox
-import secrets
-import string
-from utils import get_save_path
+from base_tool import BaseToolFrame
+from theme import style_button, style_label, style_entry, style_textbox, BG_COLOR, PANEL_COLOR
+import pyperclip  # type: ignore  # For copying to clipboard
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
+TAB_NAME = "Password Generator"
 
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="Password Generator", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        # ===== MAIN PANELS =====
+        self.left_panel = tk.Frame(self, bg=PANEL_COLOR, width=300)
+        self.left_panel.pack(side="left", fill="y", padx=5, pady=5)
 
-        row = tk.Frame(self, bg=BG_COLOR); row.pack(pady=4)
-        tk.Label(row, text="Length:", bg=BG_COLOR, fg=FG_COLOR).pack(side="left")
-        self.len_entry = tk.Entry(row, width=6, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.len_entry.insert(0, "16")
-        self.len_entry.pack(side="left", padx=6)
+        self.right_panel = tk.Frame(self, bg=BG_COLOR)
+        self.right_panel.pack(side="right", fill="both", expand=True, padx=5, pady=5)
 
-        self.use_upper = tk.IntVar(value=1)
-        self.use_lower = tk.IntVar(value=1)
-        self.use_digits = tk.IntVar(value=1)
-        self.use_punct = tk.IntVar(value=1)
+        # ===== LEFT: SETTINGS =====
+        style_label(tk.Label(self.left_panel, text="🔢 Password Length"))
+        self.length_var = tk.IntVar(value=12)
+        self.length_slider = tk.Scale(self.left_panel, from_=4, to=64, orient="horizontal",
+                                      variable=self.length_var, bg=PANEL_COLOR, fg="white",
+                                      troughcolor=BG_COLOR, highlightthickness=0)
+        self.length_slider.pack(fill="x", pady=5)
 
-        opts = tk.Frame(self, bg=BG_COLOR); opts.pack(pady=4)
-        tk.Checkbutton(opts, text="Uppercase", variable=self.use_upper, bg=BG_COLOR, fg=FG_COLOR,
-                       selectcolor=BG_COLOR, activebackground=BG_COLOR).pack(side="left")
-        tk.Checkbutton(opts, text="Lowercase", variable=self.use_lower, bg=BG_COLOR, fg=FG_COLOR,
-                       selectcolor=BG_COLOR, activebackground=BG_COLOR).pack(side="left", padx=4)
-        tk.Checkbutton(opts, text="Digits", variable=self.use_digits, bg=BG_COLOR, fg=FG_COLOR,
-                       selectcolor=BG_COLOR, activebackground=BG_COLOR).pack(side="left", padx=4)
-        tk.Checkbutton(opts, text="Symbols", variable=self.use_punct, bg=BG_COLOR, fg=FG_COLOR,
-                       selectcolor=BG_COLOR, activebackground=BG_COLOR).pack(side="left", padx=4)
+        style_label(tk.Label(self.left_panel, text="⚙️ Options"))
+        self.use_upper = tk.BooleanVar(value=True)
+        self.use_lower = tk.BooleanVar(value=True)
+        self.use_digits = tk.BooleanVar(value=True)
+        self.use_symbols = tk.BooleanVar(value=True)
 
-        self.make_button(self, "Generate", self.generate).pack(pady=8)
-        self.output = tk.Entry(self, width=60, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.output.pack(pady=4)
+        for text, var in [
+            ("Uppercase (A-Z)", self.use_upper),
+            ("Lowercase (a-z)", self.use_lower),
+            ("Digits (0-9)", self.use_digits),
+            ("Symbols (!@#$)", self.use_symbols)
+        ]:
+            cb = tk.Checkbutton(self.left_panel, text=text, variable=var,
+                                bg=PANEL_COLOR, fg="white", selectcolor=BG_COLOR)
+            cb.pack(anchor="w")
 
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+        style_label(tk.Label(self.left_panel, text="📦 Batch Size"))
+        self.batch_var = tk.IntVar(value=1)
+        self.batch_entry = tk.Entry(self.left_panel, textvariable=self.batch_var)
+        style_entry(self.batch_entry)
+        self.batch_entry.pack(fill="x", pady=5)
 
-    def generate(self):
-        try:
-            length = int(self.len_entry.get())
-            if length <= 0:
-                raise ValueError
-        except Exception:
-            messagebox.showerror("Error", "Invalid length.")
+        gen_btn = tk.Button(self.left_panel, text="Generate Password(s)", command=self.generate_passwords)
+        style_button(gen_btn)
+        gen_btn.pack(pady=5)
+
+        # ===== RIGHT: OUTPUT =====
+        style_label(tk.Label(self.right_panel, text="📜 Generated Passwords"))
+        self.output_text = tk.Text(self.right_panel, height=15)
+        style_textbox(self.output_text)
+        self.output_text.pack(fill="both", expand=True, pady=5)
+
+        copy_btn = tk.Button(self.right_panel, text="Copy All to Clipboard", command=self.copy_all)
+        style_button(copy_btn)
+        copy_btn.pack(pady=5)
+
+    def generate_passwords(self):
+        length = self.length_var.get()
+        batch_size = self.batch_var.get()
+
+        if batch_size < 1 or batch_size > 50:
+            messagebox.showerror("Error", "Batch size must be between 1 and 50.")
             return
 
-        pool = ""
-        if self.use_upper.get(): pool += string.ascii_uppercase
-        if self.use_lower.get(): pool += string.ascii_lowercase
-        if self.use_digits.get(): pool += string.digits
-        if self.use_punct.get(): pool += string.punctuation
+        chars = ""
+        if self.use_upper.get():
+            chars += string.ascii_uppercase
+        if self.use_lower.get():
+            chars += string.ascii_lowercase
+        if self.use_digits.get():
+            chars += string.digits
+        if self.use_symbols.get():
+            chars += "!@#$%^&*()-_=+[]{}|;:,.<>?/"
 
-        if not pool:
-            messagebox.showerror("Error", "Select at least one character set.")
+        if not chars:
+            messagebox.showerror("Error", "Select at least one character set!")
             return
 
-        chars = []
-        if self.use_upper.get(): chars.append(secrets.choice(string.ascii_uppercase))
-        if self.use_lower.get(): chars.append(secrets.choice(string.ascii_lowercase))
-        if self.use_digits.get(): chars.append(secrets.choice(string.digits))
-        if self.use_punct.get(): chars.append(secrets.choice(string.punctuation))
-        while len(chars) < length:
-            chars.append(secrets.choice(pool))
-        secrets.SystemRandom().shuffle(chars)
-        pwd = "".join(chars[:length])
+        self.output_text.delete("1.0", tk.END)
+        for _ in range(batch_size):
+            password = "".join(random.choice(chars) for _ in range(length))
+            self.output_text.insert(tk.END, password + "\n")
 
-        self.output.delete(0, tk.END)
-        self.output.insert(0, pwd)
-
-        path = get_save_path("Password_Generator", "passwords.txt")
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(pwd + "\n")
-        messagebox.showinfo("Saved", f"Password appended to:\n{path}")
+    def copy_all(self):
+        text = self.output_text.get("1.0", tk.END).strip()
+        if not text:
+            messagebox.showerror("Error", "No passwords to copy.")
+            return
+        pyperclip.copy(text)
+        messagebox.showinfo("Copied", "All passwords copied to clipboard.")
