@@ -1,236 +1,195 @@
-TAB_NAME = "File Finder"
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
-from ddgs import DDGS
+from tkinter import messagebox
+from base_tool import BaseToolFrame
 import requests
-import os
-from urllib.parse import urlparse
-from utils import get_save_path
+import webbrowser
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from theme import style_button, style_label, style_entry, BG_COLOR, PANEL_COLOR
+from utils import get_save_path, ensure_results_subfolder
+from ddgs import DDGS  # ✅ DuckDuckGo Search
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
-ENTRY_BG = "#222222"
+TAB_NAME = "File Finder"
 
-# File type groups
-GROUPS = {
-    "Documents": [".pdf", ".epub", ".docx", ".pptx", ".xlsx"],
-    "Audio": [".mp3", ".wav", ".flac", ".m4a"],
-    "Video": [".mp4", ".mkv", ".avi", ".mov"],
-    "Archives": [".zip", ".rar", ".7z"],
-    "Torrents": [".torrent"],
-    "Data": [".csv", ".json", ".tsv"]
+# File size categories (bytes)
+SIZE_CATEGORIES = {
+    "All": (0, float("inf")),
+    "Small (<1MB)": (0, 1 * 1024 * 1024),
+    "Medium (1–100MB)": (1 * 1024 * 1024, 100 * 1024 * 1024),
+    "Large (100MB–1GB)": (100 * 1024 * 1024, 1024 * 1024 * 1024),
+    "Huge (>1GB)": (1024 * 1024 * 1024, float("inf")),
 }
 
-TEXT_PREVIEWABLE = (".txt", ".csv", ".tsv", ".json", ".md")
-HEAD_TIMEOUT = 10
-GET_TIMEOUT = 30
-MAX_RESULTS = 80
+FILE_TYPES = ["pdf", "mp4", "torrent", "txt", "mtx", "edgelist", "docx"]
 
-def human_size(num):
-    try:
-        num = float(num)
-    except:
-        return "Unknown"
-    for unit in ["B","KB","MB","GB","TB"]:
-        if num < 1024:
-            return f"{num:.1f} {unit}"
-        num /= 1024
-    return f"{num:.1f} PB"
-
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="🔎 Universal File Hunter", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        ensure_results_subfolder("File_Finder")
 
-        # Query row
-        qrow = tk.Frame(self, bg=BG_COLOR)
-        qrow.pack(pady=5)
-        tk.Label(qrow, text="Search:", bg=BG_COLOR, fg=FG_COLOR).pack(side="left", padx=(0,6))
-        self.query_entry = tk.Entry(qrow, width=60, bg=ENTRY_BG, fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.query_entry.pack(side="left", padx=(0,8))
-        self.make_button(qrow, "Search", self.search).pack(side="left")
+        # ===== Left Controls =====
+        self.left_panel = tk.Frame(self, bg=PANEL_COLOR, width=350)
+        self.left_panel.pack(side="left", fill="y", padx=5, pady=5)
 
-        # Filters
-        filt = tk.LabelFrame(self, text=" File Types ", bg=BG_COLOR, fg=FG_COLOR)
-        filt.pack(pady=8)
+        style_label(tk.Label(self.left_panel, text="🔍 Search Query"))
+        self.query_entry = tk.Entry(self.left_panel)
+        style_entry(self.query_entry)
+        self.query_entry.pack(fill="x", pady=5)
 
-        self.vars = {}
-        grid = tk.Frame(filt, bg=BG_COLOR)
-        grid.pack(padx=6, pady=6)
-        col = 0
-        for group, exts in GROUPS.items():
-            v = tk.BooleanVar(value=True if group in ("Documents","Audio","Video","Torrents") else False)
-            self.vars[group] = v
-            cb = tk.Checkbutton(grid, text=f"{group}", variable=v, bg=BG_COLOR, fg=FG_COLOR,
-                                activebackground=BG_COLOR, activeforeground=FG_COLOR,
-                                selectcolor=BG_COLOR, highlightthickness=0)
-            cb.grid(row=0, column=col, padx=10, pady=2, sticky="w")
-            col += 1
+        style_label(tk.Label(self.left_panel, text="📂 File Type"))
+        self.filetype_var = tk.StringVar(value="pdf")
+        self.filetype_menu = tk.OptionMenu(self.left_panel, self.filetype_var, *FILE_TYPES)
+        self.filetype_menu.config(bg=PANEL_COLOR, fg="white", relief="flat", highlightthickness=0)
+        self.filetype_menu.pack(fill="x", pady=5)
 
-        crow = tk.Frame(filt, bg=BG_COLOR)
-        crow.pack(pady=4)
-        tk.Label(crow, text="Custom extensions (comma-separated, e.g. .txt,.srt):",
-                 bg=BG_COLOR, fg=FG_COLOR).pack(side="left", padx=(0,6))
-        self.custom_ext = tk.Entry(crow, width=30, bg=ENTRY_BG, fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.custom_ext.pack(side="left")
+        style_label(tk.Label(self.left_panel, text="📏 File Size Category"))
+        self.size_var = tk.StringVar(value="All")
+        self.size_menu = tk.OptionMenu(self.left_panel, self.size_var, *SIZE_CATEGORIES.keys())
+        self.size_menu.config(bg=PANEL_COLOR, fg="white", relief="flat", highlightthickness=0)
+        self.size_menu.pack(fill="x", pady=5)
 
-        # Results list
-        self.results = []  # list of dicts: {title, href}
-        self.listbox = tk.Listbox(self, width=100, height=16, bg=ENTRY_BG, fg=FG_COLOR)
-        self.listbox.pack(pady=6)
+        self.skip_size_var = tk.BooleanVar(value=False)
+        skip_size_check = tk.Checkbutton(
+            self.left_panel, text="⚡ Skip Size Check (faster)",
+            variable=self.skip_size_var, bg=PANEL_COLOR, fg="white", selectcolor=BG_COLOR
+        )
+        skip_size_check.pack(pady=5, anchor="w")
 
-        # Actions
-        arow = tk.Frame(self, bg=BG_COLOR)
-        arow.pack(pady=6)
-        self.make_button(arow, "Details / Preview", self.details).pack(side="left", padx=5)
-        self.make_button(arow, "Download Selected", self.download).pack(side="left", padx=5)
+        search_btn = tk.Button(self.left_panel, text="Search Files", command=self.search_files)
+        style_button(search_btn)
+        search_btn.pack(pady=10, fill="x")
 
-        # Info area
-        self.info = scrolledtext.ScrolledText(self, wrap="word", width=100, height=10,
-                                              bg=ENTRY_BG, fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.info.pack(padx=6, pady=(2,10))
-        self.info.insert(tk.END, "Tip: refine with keywords like year, resolution, or author. "
-                                 "Double-check legality before downloading.")
-        self.info.config(state="disabled")
+        # ===== Right Results Panel =====
+        self.right_panel = tk.Frame(self, bg=BG_COLOR)
+        self.right_panel.pack(side="right", fill="both", expand=True, padx=5, pady=5)
 
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+        style_label(tk.Label(self.right_panel, text="📜 Search Results"))
 
-    def selected_exts(self):
-        exts = []
-        for group, v in self.vars.items():
-            if v.get():
-                exts.extend(GROUPS[group])
-        extra = [e.strip() for e in self.custom_ext.get().split(",") if e.strip()]
-        for e in extra:
-            if not e.startswith("."):
-                e = "." + e
-            exts.append(e.lower())
-        # Deduplicate
-        return sorted(set([e.lower() for e in exts]))
+        self.results_frame = tk.Frame(self.right_panel, bg=BG_COLOR)
+        self.results_frame.pack(fill="both", expand=True)
 
-    def search(self):
+        self.results_canvas = tk.Canvas(self.results_frame, bg=BG_COLOR, highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self.results_frame, orient="vertical", command=self.results_canvas.yview)
+        self.scrollable_frame = tk.Frame(self.results_canvas, bg=BG_COLOR)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.results_canvas.configure(scrollregion=self.results_canvas.bbox("all"))
+        )
+        self.results_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.results_canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.results_canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+    def search_files(self):
         query = self.query_entry.get().strip()
+        filetype = self.filetype_var.get()
+        size_category = self.size_var.get()
+
         if not query:
             messagebox.showerror("Error", "Please enter a search query.")
             return
 
-        exts = self.selected_exts()
-        # Build a gentle hint for filetypes; DuckDuckGo understands filetype:pdf
-        # but we also filter client-side by extension
-        hint = ""
-        if exts:
-            # keep short to avoid query bloat; include a few common ones
-            common = [e.lstrip(".") for e in exts[:6]]
-            hint = " " + " OR ".join([f"filetype:{c}" for c in common])
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
 
-        self.listbox.delete(0, tk.END)
-        self.results = []
+        min_size, max_size = SIZE_CATEGORIES[size_category]
+        results_found = 0
 
-        try:
-            with DDGS() as ddgs:
-                for res in ddgs.text(query + hint, max_results=MAX_RESULTS):
-                    href = (res.get("href") or "").strip()
-                    title = (res.get("title") or href).strip()
-                    if not href:
-                        continue
-                    if self._matches_ext(href, exts):
-                        self.results.append({"title": title, "href": href})
-                        self.listbox.insert(tk.END, f"{title}  —  {href}")
-        except Exception as e:
-            messagebox.showerror("Search Error", f"Failed to search: {e}")
+        urls = []
+        with DDGS() as ddgs:
+            for result in ddgs.text(f"{query} filetype:{filetype}", max_results=100):
+                url = result.get("href")
+                title = result.get("title", "No Title")
+
+                if not url or not url.lower().endswith(f".{filetype}"):
+                    continue
+                urls.append((title, url))
+
+        if not urls:
+            tk.Label(self.scrollable_frame, text="⚠️ No matching files found.", bg=BG_COLOR, fg="red").pack(pady=10)
             return
 
-        if not self.results:
-            messagebox.showinfo("No Results", "No matching files found with the selected types.")
-
-    def _matches_ext(self, url, exts):
-        path = urlparse(url).path.lower()
-        for e in exts:
-            if path.endswith(e.lower()):
-                return True
-        # also accept obvious direct files even if extension absent
-        return any(path.endswith(e) for e in sum(GROUPS.values(), []))
-
-    def _head_info(self, url):
-        try:
-            r = requests.head(url, allow_redirects=True, timeout=HEAD_TIMEOUT)
-            size = r.headers.get("Content-Length")
-            ctype = r.headers.get("Content-Type")
-            return human_size(size) if size else "Unknown", ctype or "Unknown"
-        except Exception:
-            return "Unknown", "Unknown"
-
-    def details(self):
-        idxs = self.listbox.curselection()
-        if not idxs:
-            messagebox.showerror("Error", "Select a result first.")
-            return
-        item = self.results[idxs[0]]
-        url = item["href"]
-
-        size, ctype = self._head_info(url)
-        preview = self._preview_text_if_possible(url)
-
-        self.info.config(state="normal")
-        self.info.delete("1.0", tk.END)
-        self.info.insert(tk.END, f"Title: {item['title']}\nURL: {url}\nSize: {size}\nType: {ctype}\n\n")
-        if preview:
-            self.info.insert(tk.END, "— Preview —\n")
-            self.info.insert(tk.END, preview)
+        if self.skip_size_var.get():
+            # Skip size check: instantly show results
+            for title, url in urls:
+                self.add_result(title, url, None)
+                results_found += 1
         else:
-            self.info.insert(tk.END, "No preview available for this file type.")
-        self.info.config(state="disabled")
+            # Parallel size fetching
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = {executor.submit(self.fetch_size, url): (title, url) for title, url in urls}
+                for future in as_completed(futures):
+                    title, url = futures[future]
+                    size_mb = future.result()
+                    if size_mb is not None:
+                        size_bytes = size_mb * 1024 * 1024
+                        if not (min_size <= size_bytes <= max_size):
+                            continue
+                    self.add_result(title, url, size_mb)
+                    results_found += 1
 
-    def _preview_text_if_possible(self, url):
-        path = urlparse(url).path.lower()
-        if not any(path.endswith(ext) for ext in TEXT_PREVIEWABLE + (".txt",)):
-            return None
+        if results_found == 0:
+            tk.Label(self.scrollable_frame, text="⚠️ No files matched your filters.", bg=BG_COLOR, fg="red").pack(pady=10)
+
+    def fetch_size(self, url):
+        """Fetch file size using HEAD request (returns MB, or None if unknown)."""
         try:
-            r = requests.get(url, timeout=GET_TIMEOUT)
-            if r.status_code != 200:
-                return None
-            text = r.text
-            lines = text.splitlines()[:40]
-            snippet = "\n".join(lines)
-            return snippet[:4000]
+            head = requests.head(url, allow_redirects=True, timeout=5)
+            if "Content-Length" in head.headers:
+                size = int(head.headers["Content-Length"])
+                if size > 0:
+                    return size / (1024 * 1024)
         except Exception:
-            return None
+            try:
+                # Fallback: try GET request just for headers
+                with requests.get(url, stream=True, timeout=5) as r:
+                    if "Content-Length" in r.headers:
+                        size = int(r.headers["Content-Length"])
+                        if size > 0:
+                            return size / (1024 * 1024)
+            except Exception:
+                return None
+        return None
 
-    def download(self):
-        idxs = self.listbox.curselection()
-        if not idxs:
-            messagebox.showerror("Error", "Select a result to download.")
-            return
-        item = self.results[idxs[0]]
-        url = item["href"]
-        filename = os.path.basename(urlparse(url).path) or "downloaded_file"
-        size, ctype = self._head_info(url)
+    def add_result(self, title, url, size_mb):
+        frame = tk.Frame(self.scrollable_frame, bg=BG_COLOR, pady=5)
+        frame.pack(fill="x", anchor="w")
 
-        if not messagebox.askyesno(
-            "Confirm Download",
-            f"File: {filename}\nSize: {size}\nType: {ctype}\n\nDo you want to download this file?"
-        ):
+        short_title = (title[:60] + "...") if len(title) > 60 else title
+        style_label(tk.Label(frame, text=f"🔹 {short_title}"))
+
+        link = tk.Label(frame, text=f"🌐 {url}", fg="cyan", bg=BG_COLOR, cursor="hand2")
+        link.pack(anchor="w")
+        link.bind("<Button-1>", lambda e: webbrowser.open(url))
+
+        if size_mb is None:
+            size_text = " (Unknown Size)"
+        else:
+            size_text = f" ({size_mb:.2f} MB)"
+
+        download_btn = tk.Button(frame, text=f"📥 Download{size_text}", command=lambda: self.download_file(url))
+        style_button(download_btn)
+        download_btn.pack(anchor="e", pady=2)
+
+        tk.Label(frame, text="-" * 60, bg=BG_COLOR, fg="gray").pack(fill="x")
+
+    def download_file(self, url):
+        filename = url.split("/")[-1] or "downloaded_file"
+        save_path = get_save_path("File_Finder", filename)
+
+        if not messagebox.askyesno("Confirm Download", f"Download this file?\n\n{url}\n\n→ {save_path}"):
             return
 
         try:
-            resp = requests.get(url, stream=True, timeout=GET_TIMEOUT)
-            if resp.status_code != 200:
-                messagebox.showerror("Error", f"Failed to download: HTTP {resp.status_code}")
-                return
-            save_path = get_save_path("File_Finder", filename)
+            response = requests.get(url, stream=True, timeout=10)
             with open(save_path, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            messagebox.showinfo("Success", f"Downloaded to:\n{save_path}")
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+            messagebox.showinfo("Download Complete", f"File saved to:\n{save_path}")
         except Exception as e:
-            messagebox.showerror("Error", f"Download failed: {e}")
+            messagebox.showerror("Error", f"Failed to download file:\n{e}")
