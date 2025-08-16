@@ -3,7 +3,7 @@ import importlib
 import os
 import sys
 from utils import ensure_results_subfolder, RESULTS_ROOT
-from theme import BG_COLOR, PANEL_COLOR, TEXT_COLOR, TITLE_FONT, style_button
+from theme import BG_COLOR, PANEL_COLOR, TEXT_COLOR, TITLE_FONT, style_button #type: ignore
 
 ICON_MAP = {
     "QR Tools": "📷",
