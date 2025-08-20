@@ -9,26 +9,26 @@ My Toolbox is a comprehensive Python-based desktop utility framework built with 
 - **Python Version:** 3.7 or higher  
 - **GUI Framework:** Tkinter (included with standard Python distributions)  
 - **Additional Libraries:**  
- - cryptography
- - pyperclip
- - Pillow
- - reportlab
- - networkx
- - matplotlib
- - scipy
- - qrcode[pil]
- - pyzbar
- - requests
- - ddgs
- - squarify
- - psutil
- - requests
- - python-whois
- - networkx
- - matplotlib
- - python-nmap
- - pywifi
- - scapy
+   - cryptography
+   - pyperclip
+   - Pillow
+   - reportlab
+   - networkx
+   - matplotlib
+   - scipy
+   - qrcode[pil]
+   - pyzbar
+   - requests
+   - ddgs
+   - squarify
+   - psutil
+   - requests
+   - python-whois
+   - networkx
+   - matplotlib
+   - python-nmap
+   - pywifi
+   - scapy
 - **Operating System:** Cross-platform (Windows, macOS, Linux)  
 - **Others:** Ensure required dependencies are installed by using pip.
 
