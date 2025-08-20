@@ -1,24 +1,4 @@
 # tools/network_security_scanner.py
-"""
-Network Security Scanner — modular single-file tool for your Toolbox.
-
-Features included (non-AI):
-1) Service detection (banner grabbing)
-2) OS fingerprint (basic TTL heuristic)
-3) Vulnerability hints for common risky ports
-4) (Safe) "default credential check" - single attempt per credential, opt-in only
-5) SSL/TLS certificate checks
-6) Export (CSV/JSON/HTML report)
-7) Graph visualization (networkx + matplotlib, optional)
-8) Traceroute (scapy if available, else system 'traceroute' / 'tracert')
-9) Ping sweep discovery
-10) Subnet auto-detect (psutil)
-11) Continuous monitor mode (rescan every N minutes)
-12) Stop/cancel scan
-13) Progress bar + ETA
-14) WHOIS enrichment (optional, python-whois)
-15) Shodan enrichment (optional, user-provided key)
-"""
 
 from __future__ import annotations
 
