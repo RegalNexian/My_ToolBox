@@ -17,7 +17,9 @@ ICON_MAP = {
     "Color Picker": "🎨",
     "Steganography Tool": "🖼",
     "Dataset Finder": "🌐",
-    "File Finder": "🔎",
+    "Research Paper Finder": "🔎",
+    "Network Mapper": "🌐",
+    "Disk Space Visualizer": "💽"
 }
 
 class ToolboxApp(tk.Tk):
@@ -46,7 +48,8 @@ class ToolboxApp(tk.Tk):
                 try:
                     module = importlib.import_module(module_name)
                     if hasattr(module, "ToolFrame"):
-                        tab_name = getattr(module, "TAB_NAME", module_name.replace("_", " ").title())
+                        tab_name = getattr(module, "TAB_NAME", 
+                                           module_name.replace("_", " ").title())
                         tools_list.append((tab_name, module))
                 except (ImportError, AttributeError) as e:
                     print(f"Error loading {module_name}: {e}")

@@ -37,9 +37,26 @@ def style_label(label):
     label.config(bg=BG_COLOR, fg=TEXT_COLOR, font=LABEL_FONT)
 
 # 📝 Entry/Textbox Styling
-def style_entry(entry):
+def style_entry(entry, placeholder=None):
     entry.config(bg="#111111", fg=TEXT_COLOR, insertbackground=TEXT_COLOR,
                  relief="flat", font=TEXTBOX_FONT, highlightbackground=BTN_BORDER_COLOR)
+    
+    if placeholder:
+        entry.insert(0, placeholder)
+        entry.config(fg="gray")
+
+        def on_focus_in(e):
+            if entry.get() == placeholder:
+                entry.delete(0, "end")
+                entry.config(fg=TEXT_COLOR)
+
+        def on_focus_out(e):
+            if not entry.get():
+                entry.insert(0, placeholder)
+                entry.config(fg="gray")
+
+        entry.bind("<FocusIn>", on_focus_in)
+        entry.bind("<FocusOut>", on_focus_out)
 
 def style_textbox(textbox):
     textbox.config(bg="#111111", fg=TEXT_COLOR, insertbackground=TEXT_COLOR,
