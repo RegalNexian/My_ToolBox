@@ -19,7 +19,10 @@ ICON_MAP = {
     "Dataset Finder": "🌐",
     "Research Paper Finder": "🔎",
     "Network Mapper": "🌐",
-    "Disk Space Visualizer": "💽"
+    "Disk Space Visualizer": "💽",
+    "Data Profiler": "📈",
+    "Experiment Tracker Lite": "🧪",
+    "Prompt Evaluator": "🧠"
 }
 
 class ToolboxApp(tk.Tk):
