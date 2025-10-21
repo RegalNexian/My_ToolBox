@@ -498,6 +498,20 @@ class ToolFrame(BaseToolFrame):
         # Left control panel
         left = tk.Frame(self, bg=PANEL_COLOR, width=360)
         left.pack(side="left", fill="y", padx=6, pady=6)
+        
+        # Ethical notice
+        notice_frame = tk.Frame(left, bg="#2d3748", relief="solid", bd=1)
+        notice_frame.pack(fill="x", pady=(0, 8))
+        notice_label = tk.Label(
+            notice_frame,
+            text="⚠️ ETHICAL USE NOTICE\nUse responsibly and only on systems you own or have permission to test",
+            bg="#2d3748",
+            fg="#ffd700",
+            font=("Arial", 9, "bold"),
+            justify="center"
+        )
+        notice_label.pack(pady=6)
+        
         style_label(tk.Label(left, text="🔒 Network Security Scanner"))
         style_label(tk.Label(left, text="Target (auto-detected)"))
         self.target_entry = tk.Entry(left)

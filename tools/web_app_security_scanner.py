@@ -32,9 +32,6 @@ class WebAppSecurityScanner(SecurityToolFrame):
         self.is_scanning = False
         self.session = requests.Session()
         
-        # Setup security framework
-        self.setup_security_framework()
-        
         # Initialize vulnerability tests
         self.vulnerability_tests = self.initialize_vulnerability_tests()
         
@@ -162,7 +159,15 @@ class WebAppSecurityScanner(SecurityToolFrame):
         title_label = tk.Label(left_panel, text="🌐 Web App Security Scanner", 
                               bg=BG_COLOR, fg=TEXT_COLOR, 
                               font=("Consolas", 14, "bold"))
-        title_label.pack(pady=(0, 20))
+        title_label.pack(pady=(0, 10))
+        
+        # Ethical notice
+        ethical_notice = tk.Label(left_panel, 
+                                text="⚠️ Use responsibly and only on systems you own or have permission to test",
+                                bg=BG_COLOR, fg="#FFA500", 
+                                font=("Consolas", 9),
+                                wraplength=380, justify="center")
+        ethical_notice.pack(pady=(0, 20))
         
         # Target configuration
         target_frame = tk.LabelFrame(left_panel, text="Target Configuration", 
@@ -338,12 +343,6 @@ class WebAppSecurityScanner(SecurityToolFrame):
     
     def start_scan(self):
         """Start the web application security scan"""
-        # Check authorization first
-        if not hasattr(self, 'security_base') or not self.security_base or not self.security_base.is_authorized:
-            messagebox.showerror("Authorization Required", 
-                               "Please validate target before running security operations.")
-            return
-        
         if self.is_scanning:
             messagebox.showwarning("Scan in Progress", "A scan is already running.")
             return
@@ -376,9 +375,6 @@ class WebAppSecurityScanner(SecurityToolFrame):
         self.scan_thread = threading.Thread(target=self.run_scan, args=(url, selected_tests))
         self.scan_thread.daemon = True
         self.scan_thread.start()
-        
-        # Log the scan start
-        self.log_security_activity("WEB_SCAN_STARTED", f"Web application security scan started", url)
     
     def run_scan(self, url: str, selected_tests: List[str]):
         """Run the actual web application security scan"""
@@ -425,8 +421,6 @@ class WebAppSecurityScanner(SecurityToolFrame):
             self.is_scanning = False
             self.scan_button.config(state="normal")
             self.stop_button.config(state="disabled")
-            self.log_security_activity("WEB_SCAN_COMPLETED", 
-                                     f"Web application security scan completed - {len(self.scan_results)} issues found")
     
     def setup_session(self):
         """Setup requests session with authentication if needed"""

@@ -3,10 +3,9 @@ import os
 import json
 import hashlib
 import logging
-import ipaddress
 import re
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -46,52 +45,9 @@ class SecurityUtils:
             # Secure the key file permissions
             os.chmod(key_file, 0o600)
     
-    def validate_target_ethical(self, target: str, operation: str) -> Tuple[bool, str]:
-        """Validate if target is ethical for security operations"""
-        try:
-            # Check if target is localhost or private network
-            if self.is_local_or_private_target(target):
-                self.log_activity("ETHICAL_CHECK", f"Local/private target approved: {target}", operation)
-                return True, "Local or private network target approved"
-            
-            # Check if target is in whitelist
-            if self.is_target_whitelisted(target):
-                self.log_activity("ETHICAL_CHECK", f"Whitelisted target approved: {target}", operation)
-                return True, "Whitelisted target approved"
-            
-            # For external targets, require explicit consent
-            self.log_activity("ETHICAL_WARNING", f"External target requires consent: {target}", operation)
-            return False, "External target requires explicit consent and authorization"
-            
-        except Exception as e:
-            self.log_activity("ETHICAL_ERROR", f"Error validating target {target}: {str(e)}", operation)
-            return False, f"Validation error: {str(e)}"
+
     
-    def is_local_or_private_target(self, target: str) -> bool:
-        """Check if target is localhost or private network"""
-        try:
-            # Handle domain names by resolving to IP
-            if not self.is_ip_address(target):
-                target = socket.gethostbyname(target)
-            
-            ip = ipaddress.ip_address(target)
-            
-            # Check for localhost
-            if ip.is_loopback:
-                return True
-            
-            # Check for private networks
-            if ip.is_private:
-                return True
-            
-            # Check for link-local addresses
-            if ip.is_link_local:
-                return True
-                
-            return False
-            
-        except (socket.gaierror, ipaddress.AddressValueError, ValueError):
-            return False
+
     
     def is_ip_address(self, target: str) -> bool:
         """Check if string is a valid IP address"""
@@ -101,44 +57,9 @@ class SecurityUtils:
         except ipaddress.AddressValueError:
             return False
     
-    def is_target_whitelisted(self, target: str) -> bool:
-        """Check if target is in the whitelist"""
-        whitelist_file = "security_whitelist.json"
-        if not os.path.exists(whitelist_file):
-            return False
-        
-        try:
-            with open(whitelist_file, 'r') as f:
-                whitelist = json.load(f)
-            
-            return target in whitelist.get('approved_targets', [])
-        except (json.JSONDecodeError, KeyError):
-            return False
+
     
-    def add_to_whitelist(self, target: str, reason: str = ""):
-        """Add target to security whitelist"""
-        whitelist_file = "security_whitelist.json"
-        
-        # Load existing whitelist or create new
-        if os.path.exists(whitelist_file):
-            with open(whitelist_file, 'r') as f:
-                whitelist = json.load(f)
-        else:
-            whitelist = {"approved_targets": [], "entries": {}}
-        
-        # Add target
-        if target not in whitelist["approved_targets"]:
-            whitelist["approved_targets"].append(target)
-            whitelist["entries"][target] = {
-                "added_date": datetime.now().isoformat(),
-                "reason": reason
-            }
-        
-        # Save whitelist
-        with open(whitelist_file, 'w') as f:
-            json.dump(whitelist, f, indent=2)
-        
-        self.log_activity("WHITELIST_ADD", f"Added {target} to whitelist: {reason}")
+
     
     def log_activity(self, action: str, details: str, operation: str = "", user: str = "system"):
         """Log security-related activities"""
@@ -248,42 +169,7 @@ class SecurityUtils:
         
         return True, "Input validation passed"
     
-    def rate_limit_check(self, operation: str, max_requests: int = 10, 
-                        time_window: int = 60) -> Tuple[bool, str]:
-        """Check rate limiting for operations"""
-        rate_limit_file = "rate_limits.json"
-        current_time = datetime.now().timestamp()
-        
-        # Load existing rate limit data
-        if os.path.exists(rate_limit_file):
-            with open(rate_limit_file, 'r') as f:
-                rate_data = json.load(f)
-        else:
-            rate_data = {}
-        
-        # Clean old entries
-        if operation in rate_data:
-            rate_data[operation] = [
-                timestamp for timestamp in rate_data[operation]
-                if current_time - timestamp < time_window
-            ]
-        else:
-            rate_data[operation] = []
-        
-        # Check if limit exceeded
-        if len(rate_data[operation]) >= max_requests:
-            self.log_activity("RATE_LIMIT_EXCEEDED", 
-                            f"Rate limit exceeded for {operation}: {len(rate_data[operation])}/{max_requests}")
-            return False, f"Rate limit exceeded: {len(rate_data[operation])}/{max_requests} requests in {time_window}s"
-        
-        # Add current request
-        rate_data[operation].append(current_time)
-        
-        # Save rate limit data
-        with open(rate_limit_file, 'w') as f:
-            json.dump(rate_data, f)
-        
-        return True, "Rate limit check passed"
+
     
     def get_security_audit_log(self, limit: int = 100) -> List[Dict]:
         """Retrieve recent security audit log entries"""
@@ -340,50 +226,7 @@ class SecurityUtils:
         return report
 
 
-class SecurityToolBase:
-    """Base class for security tools with ethical validation and logging"""
-    
-    def __init__(self, tool_name: str):
-        self.tool_name = tool_name
-        self.security_utils = SecurityUtils()
-        self.is_authorized = False
-        
-    def validate_and_authorize(self, target: str, operation: str) -> bool:
-        """Validate target and get authorization for security operation"""
-        # Ethical validation
-        is_ethical, message = self.security_utils.validate_target_ethical(target, operation)
-        if not is_ethical:
-            self.security_utils.log_activity("AUTHORIZATION_DENIED", 
-                                           f"Ethical validation failed for {target}: {message}", 
-                                           f"{self.tool_name}:{operation}")
-            return False
-        
-        # Rate limiting
-        is_within_limit, limit_message = self.security_utils.rate_limit_check(
-            f"{self.tool_name}:{operation}"
-        )
-        if not is_within_limit:
-            return False
-        
-        # Log authorization
-        self.security_utils.log_activity("AUTHORIZATION_GRANTED", 
-                                       f"Security operation authorized for {target}", 
-                                       f"{self.tool_name}:{operation}")
-        self.is_authorized = True
-        return True
-    
-    def log_security_activity(self, action: str, details: str, target: str = ""):
-        """Log security tool activity"""
-        full_details = f"Tool: {self.tool_name}, Target: {target}, Details: {details}"
-        self.security_utils.log_activity(action, full_details, self.tool_name)
-    
-    def require_authorization(func):
-        """Decorator to require authorization before executing security operations"""
-        def wrapper(self, *args, **kwargs):
-            if not self.is_authorized:
-                raise PermissionError("Security operation not authorized. Call validate_and_authorize() first.")
-            return func(self, *args, **kwargs)
-        return wrapper
+
 
 
 # Global security utilities instance

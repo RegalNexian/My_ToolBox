@@ -31,9 +31,6 @@ class OSINTInformationGatherer(SecurityToolFrame):
         self.gathering_thread = None
         self.is_gathering = False
         
-        # Setup security framework
-        self.setup_security_framework()
-        
         # Initialize OSINT sources
         self.osint_sources = self.initialize_osint_sources()
         
@@ -106,12 +103,12 @@ class OSINTInformationGatherer(SecurityToolFrame):
                               font=("Consolas", 14, "bold"))
         title_label.pack(pady=(0, 20))
         
-        # Ethical notice
+        # Ethical notice - static, informational only
         ethics_frame = tk.Frame(left_panel, bg="#2A2A2A", relief="raised", bd=2)
         ethics_frame.pack(fill="x", pady=10)
         
         ethics_label = tk.Label(ethics_frame, 
-                              text="⚠️ ETHICAL OSINT ONLY\nThis tool collects only publicly available information.\nRespect privacy laws and platform terms of service.", 
+                              text="⚠️ ETHICAL USE NOTICE\nUse responsibly and only on systems you own or have permission to test.\nThis tool collects only publicly available information.\nRespect privacy laws and platform terms of service.", 
                               bg="#2A2A2A", fg="#FFD700", 
                               font=("Consolas", 9, "bold"),
                               justify="center")
@@ -252,12 +249,6 @@ class OSINTInformationGatherer(SecurityToolFrame):
     
     def start_gathering(self):
         """Start OSINT information gathering"""
-        # Check authorization first
-        if not hasattr(self, 'security_base') or not self.security_base or not self.security_base.is_authorized:
-            messagebox.showerror("Authorization Required", 
-                               "Please validate target before running security operations.")
-            return
-        
         if self.is_gathering:
             messagebox.showwarning("Gathering in Progress", "OSINT gathering is already running.")
             return
@@ -292,9 +283,6 @@ class OSINTInformationGatherer(SecurityToolFrame):
                                                 args=(target, selected_sources))
         self.gathering_thread.daemon = True
         self.gathering_thread.start()
-        
-        # Log the gathering start
-        self.log_security_activity("OSINT_GATHERING_STARTED", f"OSINT gathering started for target: {target}")
     
     def run_gathering(self, target: str, selected_sources: List[str]):
         """Run the OSINT information gathering"""
@@ -334,8 +322,6 @@ class OSINTInformationGatherer(SecurityToolFrame):
             self.is_gathering = False
             self.gather_button.config(state="normal")
             self.stop_button.config(state="disabled")
-            self.log_security_activity("OSINT_GATHERING_COMPLETED", 
-                                     f"OSINT gathering completed - {len(self.osint_data)} items found")
     
     def gather_from_source(self, source_id: str, target: str, target_type: str):
         """Gather information from a specific OSINT source"""

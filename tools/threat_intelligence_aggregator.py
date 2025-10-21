@@ -30,8 +30,7 @@ class ThreatIntelligenceAggregator(SecurityToolFrame):
         self.collection_thread = None
         self.is_collecting = False
         
-        # Setup security framework
-        self.setup_security_framework()
+
         
         # Initialize threat feeds
         self.threat_feeds = self.initialize_threat_feeds()
@@ -87,7 +86,15 @@ class ThreatIntelligenceAggregator(SecurityToolFrame):
         title_label = tk.Label(left_panel, text="🛡️ Threat Intelligence Aggregator", 
                               bg=BG_COLOR, fg=TEXT_COLOR, 
                               font=("Consolas", 14, "bold"))
-        title_label.pack(pady=(0, 20))
+        title_label.pack(pady=(0, 10))
+        
+        # Ethical notice
+        ethical_notice = tk.Label(left_panel, 
+                                text="⚠️ Use responsibly and only on systems you own or have permission to test",
+                                bg=BG_COLOR, fg="#FFA500", 
+                                font=("Consolas", 9),
+                                wraplength=380)
+        ethical_notice.pack(pady=(0, 20))
         
         # Feed selection
         feeds_frame = tk.LabelFrame(left_panel, text="Threat Intelligence Feeds", 
@@ -230,8 +237,7 @@ class ThreatIntelligenceAggregator(SecurityToolFrame):
         self.collection_thread.daemon = True
         self.collection_thread.start()
         
-        # Log the collection start
-        self.log_security_activity("THREAT_INTEL_STARTED", "Threat intelligence collection started")
+
     
     def run_collection(self, selected_feeds: List[str]):
         """Run the threat intelligence collection"""
@@ -274,8 +280,7 @@ class ThreatIntelligenceAggregator(SecurityToolFrame):
             self.is_collecting = False
             self.collect_button.config(state="normal")
             self.stop_button.config(state="disabled")
-            self.log_security_activity("THREAT_INTEL_COMPLETED", 
-                                     f"Threat intelligence collection completed - {len(self.threat_data)} indicators")
+
     
     def collect_from_feed(self, feed_id: str):
         """Collect data from a specific threat intelligence feed"""

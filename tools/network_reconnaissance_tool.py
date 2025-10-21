@@ -34,8 +34,7 @@ class NetworkReconTool(SecurityToolFrame):
         self.scan_thread = None
         self.is_scanning = False
         
-        # Setup security framework
-        self.setup_security_framework()
+
         
         # Build UI
         self.setup_ui()
@@ -57,8 +56,26 @@ class NetworkReconTool(SecurityToolFrame):
                               font=("Consolas", 14, "bold"))
         title_label.pack(pady=(0, 20))
         
-        # Security validation section (inherited from SecurityToolFrame)
-        # This adds the target validation UI automatically
+        # Ethical notice section
+        ethical_frame = tk.LabelFrame(left_panel, text="Ethical Use Notice", 
+                                    bg=BG_COLOR, fg=TEXT_COLOR)
+        ethical_frame.pack(fill="x", pady=10)
+        
+        ethical_text = tk.Label(ethical_frame, 
+                              text="⚠️ Use responsibly and only on systems you own or have explicit permission to test.",
+                              bg=BG_COLOR, fg="#FFD700", wraplength=350, justify="left")
+        ethical_text.pack(pady=5)
+        
+        # Target input section
+        target_frame = tk.LabelFrame(left_panel, text="Target Configuration", 
+                                   bg=BG_COLOR, fg=TEXT_COLOR)
+        target_frame.pack(fill="x", pady=10)
+        
+        tk.Label(target_frame, text="Target (IP/Network/Hostname):", 
+                bg=BG_COLOR, fg=TEXT_COLOR).pack(anchor="w")
+        self.target_entry = tk.Entry(target_frame, bg="#111111", fg=TEXT_COLOR,
+                                   insertbackground=TEXT_COLOR)
+        self.target_entry.pack(fill="x", pady=2)
         
         # Scan configuration
         config_frame = tk.LabelFrame(left_panel, text="Scan Configuration", 
@@ -254,12 +271,6 @@ class NetworkReconTool(SecurityToolFrame):
     
     def start_scan(self):
         """Start the network reconnaissance scan"""
-        # Check authorization first
-        if not hasattr(self, 'security_base') or not self.security_base or not self.security_base.is_authorized:
-            messagebox.showerror("Authorization Required", 
-                               "Please validate target before running security operations.")
-            return
-            
         if self.is_scanning:
             messagebox.showwarning("Scan in Progress", "A scan is already running.")
             return
@@ -298,8 +309,7 @@ class NetworkReconTool(SecurityToolFrame):
         self.scan_thread.daemon = True
         self.scan_thread.start()
         
-        # Log the scan start
-        self.log_security_activity("SCAN_STARTED", f"Nmap reconnaissance scan started", target)
+
     
     def run_scan(self, target: str):
         """Run the actual nmap scan"""
@@ -309,9 +319,7 @@ class NetworkReconTool(SecurityToolFrame):
             
             self.update_progress(10, "Building scan command...")
             
-            # Log the command (without sensitive info)
-            safe_cmd = [arg for arg in cmd if not arg.startswith('-D')]
-            self.log_security_activity("SCAN_COMMAND", f"Command: {' '.join(safe_cmd)}", target)
+
             
             self.update_progress(20, "Executing nmap scan...")
             
@@ -341,7 +349,7 @@ class NetworkReconTool(SecurityToolFrame):
             self.is_scanning = False
             self.scan_button.config(state="normal")
             self.stop_button.config(state="disabled")
-            self.log_security_activity("SCAN_COMPLETED", "Reconnaissance scan completed", target)
+
     
     def process_scan_results(self, xml_output: str, target: str):
         """Process nmap XML output and update results"""
