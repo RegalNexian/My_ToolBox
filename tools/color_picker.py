@@ -2,29 +2,19 @@ TAB_NAME = "Color Picker"
 
 import tkinter as tk
 from tkinter.colorchooser import askcolor
+from base_tool import BaseToolFrame
+from theme import BG_COLOR, TEXT_COLOR, TITLE_FONT, LABEL_FONT
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
-
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="🎨 Color Picker", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        self.add_label("🎨 Color Picker", font=TITLE_FONT)
 
-        self.make_button(self, "Pick a Color", self.pick_color).pack(pady=20)
+        self.add_button("Pick a Color", self.pick_color)
 
-        self.color_display = tk.Label(self, text="No color selected", bg=BG_COLOR, fg=FG_COLOR, font=("Segoe UI", 11))
+        self.color_display = tk.Label(self, text="No color selected", bg=BG_COLOR, fg=TEXT_COLOR, font=LABEL_FONT)
         self.color_display.pack(pady=5)
-
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
 
     def pick_color(self):
         color = askcolor()[1]

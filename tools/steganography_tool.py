@@ -1,37 +1,27 @@
 TAB_NAME = "Steganography Tool"
 
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from PIL import Image
 from utils import get_save_path
+from base_tool import BaseToolFrame
+from theme import TITLE_FONT
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
-
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="🖼 Steganography Tool", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        self.add_label("🖼 Steganography Tool", font=TITLE_FONT)
 
-        self.make_button(self, "Encode Message into Image", self.encode_ui).pack(pady=5)
-        self.make_button(self, "Decode Message from Image", self.decode_ui).pack(pady=5)
-
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+        self.add_button("Encode Message into Image", self.encode_ui)
+        self.add_button("Decode Message from Image", self.decode_ui)
 
     def encode_ui(self):
         file_path = filedialog.askopenfilename(filetypes=[("PNG Images", "*.png")])
         if not file_path:
             return
 
-        message = tk.simpledialog.askstring("Message", "Enter the message to hide:")
+        message = simpledialog.askstring("Message", "Enter the message to hide:")
         if not message:
             return
 

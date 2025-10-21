@@ -4,57 +4,51 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
 from utils import ensure_results_subfolder, get_save_path
+from base_tool import BaseToolFrame
+from theme import style_button
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
-
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="📂 Batch File Renamer", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        self.add_label("📂 Batch File Renamer", font=("Segoe UI", 12, "bold"))
 
         self.folder_path = tk.StringVar()
 
         # Folder selection
-        row1 = tk.Frame(self, bg=BG_COLOR)
+        row1 = tk.Frame(self, bg=self["bg"])
         row1.pack(pady=5)
-        tk.Entry(row1, textvariable=self.folder_path, width=60,
-                 bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR).pack(side="left", padx=5)
-        self.make_button(row1, "Browse", self.select_folder).pack(side="left")
+        folder_entry = tk.Entry(row1, textvariable=self.folder_path, width=60, 
+                               bg="#111111", fg="#FFFFFF", insertbackground="#FFFFFF")
+        folder_entry.pack(side="left", padx=5)
+        browse_btn = tk.Button(row1, text="Browse", command=self.select_folder)
+        style_button(browse_btn)
+        browse_btn.pack(side="left")
 
         # Rename options
-        row2 = tk.Frame(self, bg=BG_COLOR)
+        row2 = tk.Frame(self, bg=self["bg"])
         row2.pack(pady=5)
-        tk.Label(row2, text="Prefix:", bg=BG_COLOR, fg=FG_COLOR).pack(side="left")
-        self.prefix_entry = tk.Entry(row2, width=12, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
+        tk.Label(row2, text="Prefix:", bg=self["bg"], fg="#FFFFFF").pack(side="left")
+        self.prefix_entry = tk.Entry(row2, width=12, bg="#111111", fg="#FFFFFF", insertbackground="#FFFFFF")
         self.prefix_entry.pack(side="left", padx=5)
-        tk.Label(row2, text="Suffix:", bg=BG_COLOR, fg=FG_COLOR).pack(side="left")
-        self.suffix_entry = tk.Entry(row2, width=12, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
+        tk.Label(row2, text="Suffix:", bg=self["bg"], fg="#FFFFFF").pack(side="left")
+        self.suffix_entry = tk.Entry(row2, width=12, bg="#111111", fg="#FFFFFF", insertbackground="#FFFFFF")
         self.suffix_entry.pack(side="left", padx=5)
 
-        row3 = tk.Frame(self, bg=BG_COLOR)
+        row3 = tk.Frame(self, bg=self["bg"])
         row3.pack(pady=5)
-        tk.Label(row3, text="Start Number:", bg=BG_COLOR, fg=FG_COLOR).pack(side="left")
-        self.start_num_entry = tk.Entry(row3, width=8, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
+        tk.Label(row3, text="Start Number:", bg=self["bg"], fg="#FFFFFF").pack(side="left")
+        self.start_num_entry = tk.Entry(row3, width=8, bg="#111111", fg="#FFFFFF", insertbackground="#FFFFFF")
         self.start_num_entry.insert(0, "1")
         self.start_num_entry.pack(side="left", padx=5)
 
         # Action buttons
-        self.make_button(self, "Rename Files", self.rename_files).pack(pady=10)
+        self.add_button("Rename Files", self.rename_files)
 
         # Output log
-        self.log = tk.Text(self, width=80, height=15, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.log.pack(pady=5)
+        self.log = self.add_textbox(width=80, height=15)
 
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+
 
     def select_folder(self):
         folder = filedialog.askdirectory()

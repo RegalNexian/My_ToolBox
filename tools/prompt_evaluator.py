@@ -8,6 +8,7 @@ from collections import Counter
 from tkinter import filedialog, messagebox, scrolledtext
 
 from utils import get_save_path
+from base_tool import BaseToolFrame
 
 
 def _tokenize(text):
@@ -32,9 +33,9 @@ def _overlap_metrics(reference, hypothesis):
     return precision, recall, f1
 
 
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg="#0F1115")
+        super().__init__(master)
 
         self.dataset_path = tk.StringVar()
         self.status_var = tk.StringVar(value="Awaiting evaluation dataset…")

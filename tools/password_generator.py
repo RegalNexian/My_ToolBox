@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import messagebox
 from base_tool import BaseToolFrame
 from theme import style_button, style_label, style_entry, style_textbox, BG_COLOR, PANEL_COLOR
-import pyperclip  # type: ignore  # For copying to clipboard
+import pyperclip
 
 TAB_NAME = "Password Generator"
 

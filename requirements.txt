@@ -11,13 +11,13 @@ requests
 ddgs
 squarify
 psutil
-requests
 python-whois
-networkx
-matplotlib
 python-nmap
 pywifi
+comtypes
 scapy
 pandas
 seaborn
 PyYAML
+GitPython
+numpy

@@ -10,11 +10,8 @@ import csv
 import json
 from io import StringIO
 import gzip
-
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
+from base_tool import BaseToolFrame
+from theme import BG_COLOR, TEXT_COLOR, TITLE_FONT, style_button, style_entry
 
 DATASET_EXTS = (
     ".csv", ".xlsx", ".json", ".zip", ".tsv", ".gz",
@@ -23,31 +20,29 @@ DATASET_EXTS = (
 
 TEXT_FORMATS = (".csv", ".tsv", ".json", ".txt", ".edgelist", ".mtx", ".edges", ".graphml", ".gml")
 
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="🌐 Dataset Finder", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
+        self.add_label("🌐 Dataset Finder", font=TITLE_FONT)
 
-        self.query_entry = tk.Entry(self, width=50, bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.query_entry.pack(pady=5)
+        self.query_entry = self.add_entry(width=50)
 
-        self.make_button(self, "Search Datasets", self.search_datasets).pack(pady=5)
+        self.add_button("Search Datasets", self.search_datasets)
 
-        self.results_list = tk.Listbox(self, width=80, height=15, bg="#222222", fg=FG_COLOR)
+        self.results_list = tk.Listbox(self, width=80, height=15, bg="#111111", fg=TEXT_COLOR)
         self.results_list.pack(pady=5)
 
         action_frame = tk.Frame(self, bg=BG_COLOR)
         action_frame.pack(pady=5)
-        self.make_button(action_frame, "Preview Selected", self.preview_selected).pack(side="left", padx=5)
-        self.make_button(action_frame, "Download Selected", self.download_selected).pack(side="left", padx=5)
-
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+        
+        preview_btn = tk.Button(action_frame, text="Preview Selected", command=self.preview_selected)
+        style_button(preview_btn)
+        preview_btn.pack(side="left", padx=5)
+        
+        download_btn = tk.Button(action_frame, text="Download Selected", command=self.download_selected)
+        style_button(download_btn)
+        download_btn.pack(side="left", padx=5)
 
     def search_datasets(self):
         query = self.query_entry.get().strip()
@@ -123,7 +118,7 @@ class ToolFrame(tk.Frame):
         preview_win.title(f"Preview - {title}")
         preview_win.configure(bg=BG_COLOR)
         text_area = scrolledtext.ScrolledText(preview_win, wrap="word", width=100, height=30,
-                                              bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
+                                              bg="#111111", fg=TEXT_COLOR, insertbackground=TEXT_COLOR)
         text_area.insert(tk.END, content)
         text_area.config(state="disabled")
         text_area.pack(padx=10, pady=10)

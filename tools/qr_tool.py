@@ -1,9 +1,9 @@
 from base_tool import BaseToolFrame
-from theme import style_button #type: ignore
+from theme import style_button
 from datetime import datetime
 import qrcode
-import pyzbar.pyzbar as pyzbar  # type: ignore
-import pyperclip  # type: ignore
+import pyzbar.pyzbar as pyzbar
+import pyperclip
 import re
 import tkinter as tk
 from tkinter import filedialog, messagebox

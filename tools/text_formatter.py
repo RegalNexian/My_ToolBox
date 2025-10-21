@@ -2,35 +2,29 @@ TAB_NAME = "Text Formatter"
 
 import tkinter as tk
 from tkinter import messagebox
-from reportlab.lib.pagesizes import letter # type: ignore
-from reportlab.pdfgen import canvas # type: ignore
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 from utils import get_save_path
+from base_tool import BaseToolFrame
+from theme import style_button
 
-BG_COLOR = "#1E1E1E"
-FG_COLOR = "#FFFFFF"
-BTN_COLOR = "#333333"
-BTN_HOVER = "#444444"
-
-class ToolFrame(tk.Frame):
+class ToolFrame(BaseToolFrame):
     def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
+        super().__init__(master)
 
-        tk.Label(self, text="Text Formatter (Plain → PDF / Markdown)", font=("Segoe UI", 12, "bold"),
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
-        self.text = tk.Text(self, width=100, height=24, wrap="word",
-                            bg="#222222", fg=FG_COLOR, insertbackground=FG_COLOR)
-        self.text.pack(padx=10, pady=8)
+        self.add_label("Text Formatter (Plain → PDF / Markdown)", font=("Segoe UI", 12, "bold"))
+        self.text = self.add_textbox(width=100, height=24)
 
-        btns = tk.Frame(self, bg=BG_COLOR)
+        btns = tk.Frame(self, bg=self["bg"])
         btns.pack(pady=4)
-        self.make_button(btns, "Save as PDF", self.save_pdf).pack(side="left", padx=6)
-        self.make_button(btns, "Save as Markdown", self.save_md).pack(side="left", padx=6)
+        pdf_btn = tk.Button(btns, text="Save as PDF", command=self.save_pdf)
+        style_button(pdf_btn)
+        pdf_btn.pack(side="left", padx=6)
+        md_btn = tk.Button(btns, text="Save as Markdown", command=self.save_md)
+        style_button(md_btn)
+        md_btn.pack(side="left", padx=6)
 
-    def make_button(self, parent, text, cmd):
-        btn = tk.Button(parent, text=text, bg=BTN_COLOR, fg=FG_COLOR, relief="flat", command=cmd)
-        btn.bind("<Enter>", lambda e: btn.config(bg=BTN_HOVER))
-        btn.bind("<Leave>", lambda e: btn.config(bg=BTN_COLOR))
-        return btn
+
 
     def save_pdf(self):
         content = self.text.get("1.0", tk.END).strip()

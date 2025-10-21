@@ -19,9 +19,8 @@ import queue
 import threading
 import tkinter as tk
 from dataclasses import dataclass
-from datetime import datetime # type: ignore
 from functools import lru_cache
-from tkinter import filedialog, ttk # type: ignore
+from tkinter import filedialog, ttk
 from typing import List, Optional
 
 # Optional dependencies (best-effort imports)
